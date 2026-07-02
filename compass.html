@@ -1,4 +1,6 @@
 <div class="compass-widget-container">
+  <h2 class="widget-title">Learn to Use a Compass</h2>
+  
   <div class="compass-controls">
     <div class="mode-toggle">
       <label>
@@ -6,7 +8,6 @@
       </label>
     </div>
     
-    <!-- The challenge panel now acts as the container for the success overlay -->
     <div id="challenge-panel" class="hidden">
       <div id="progress-header">Level: 1/5</div>
       
@@ -21,7 +22,6 @@
         <p id="error-message" class="hidden">Not quite. Double-check your numbers and try again!</p>
       </div>
 
-      <!-- Success Overlay covers ONLY the challenge panel, leaving the compass visible -->
       <div id="success-overlay" class="hidden">
         <h3>🎉 Success!</h3>
         <p id="overlay-explanation-text"></p>
@@ -38,42 +38,29 @@
         </filter>
       </defs>
 
-      <!-- BASEPLATE (Rotates entirely) -->
+      <!-- BASEPLATE -->
       <g id="baseplate-group" transform="rotate(0, 200, 350)">
-        
-        <!-- Acrylic Base - Main Body -->
         <rect id="grab-area-body" x="100" y="50" width="200" height="400" rx="15" fill="rgba(240, 248, 255, 0.6)" stroke="#ccc" stroke-width="2" filter="url(#shadow)" />
-        
-        <!-- Direction of Travel Arrow -->
         <path d="M 200,60 L 200,180" stroke="#d32f2f" stroke-width="4" stroke-dasharray="6,6" />
         <polygon points="200,50 190,70 210,70" fill="#d32f2f" />
         <text x="200" y="195" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#333">DIRECTION OF TRAVEL</text>
-        
-        <!-- Index Line -->
         <line x1="200" y1="210" x2="200" y2="230" stroke="#000" stroke-width="3" />
 
-        <!-- BEZEL / DIAL (Rotates relative to baseplate) -->
+        <!-- BEZEL / DIAL -->
         <g id="bezel-group" transform="rotate(0, 200, 350)">
-          <!-- Bezel Outer Ring - Grab Area for Bezel -->
           <circle id="grab-area-bezel" cx="200" cy="350" r="110" fill="#fff" stroke="#333" stroke-width="12" cursor="grab" />
           <circle cx="200" cy="350" r="104" fill="none" stroke="#ddd" stroke-width="1" />
-          
-          <!-- Orienting Arrow ("The Shed") -->
           <polygon points="200,260 170,350 230,350" fill="rgba(211, 47, 47, 0.2)" stroke="#d32f2f" stroke-width="3" />
-          <!-- Orienting Lines -->
           <line x1="170" y1="280" x2="170" y2="440" stroke="#d32f2f" stroke-width="2" stroke-dasharray="4,4" />
           <line x1="230" y1="280" x2="230" y2="440" stroke="#d32f2f" stroke-width="2" stroke-dasharray="4,4" />
-
-          <!-- Degree Ticks and Labels injected via JS -->
           <g id="bezel-ticks"></g>
-          
           <text x="200" y="260" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#d32f2f">N</text>
           <text x="290" y="355" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#333">E</text>
           <text x="200" y="450" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#333">S</text>
           <text x="110" y="355" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#333">W</text>
         </g>
 
-        <!-- MAGNETIC NEEDLE (Points North) -->
+        <!-- MAGNETIC NEEDLE -->
         <g id="needle-group" transform="rotate(0, 200, 350)">
           <polygon points="200,265 185,350 200,350" fill="#d32f2f" />
           <polygon points="200,265 215,350 200,350" fill="#b71c1c" />
@@ -85,7 +72,6 @@
     </svg>
   </div>
 
-  <!-- Mobile Precision Controls -->
   <div class="precision-controls">
     <div class="control-group">
       <span>Dial (degrees)</span>
@@ -101,87 +87,99 @@
       </div>
     </div>
   </div>
+  
+  <p class="interaction-hint">💡 <strong>Tip:</strong> You can also use your mouse or finger directly on the compass to rotate the dial and the body.</p>
 </div>
 
 <style>
+  /* Flex architecture for full-viewport scaling */
   .compass-widget-container {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     max-width: 500px; font-size: 16px; line-height: 1.4;
     margin: 0 auto; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
   }
-  .compass-controls { text-align: center; margin-bottom: 20px; }
+  
+  .widget-title { text-align: center; margin: 0 0 15px 0; color: #1e3a8a; font-size: 1.5em; flex-shrink: 0; }
+  .compass-controls { text-align: center; margin-bottom: 10px; flex-shrink: 0; }
   .mode-toggle { margin-bottom: 15px; font-weight: bold; font-size: 1.1em; }
   
   #challenge-panel { 
-    background: #eef2ff; 
-    border-radius: 8px; 
-    border: 1px solid #c7d2fe; 
-    text-align: left; 
-    position: relative; /* Crucial for containing the overlay */
-    overflow: hidden; /* Keeps overlay corners rounded with the box */
-    min-height: 250px;
+    background: #eef2ff; border-radius: 8px; border: 1px solid #c7d2fe; text-align: left; position: relative; overflow: hidden; min-height: 250px;
   }
-  
-  #challenge-content {
-    padding: 15px 15px 20px 15px;
-  }
-
+  #challenge-content { padding: 15px 15px 20px 15px; }
   #progress-header { position: absolute; top: 10px; right: 10px; font-size: 0.85em; color: #6b7280; font-weight: bold; z-index: 5;}
-  
   #scout-guide-panel h4 { margin: 0 0 8px 0; color: #1e3a8a; }
   #scout-guide-panel p { margin: 0 0 15px 0; font-size: 0.95em; color: #4b5563; }
-
   #challenge-text { margin: 10px 0; font-size: 1.05em; color: #1e3a8a; font-weight: bold; border-top: 1px solid #c7d2fe; padding-top: 10px;}
-  
-  #check-answer-btn {
-    background: #2563eb; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; font-size: 1.05em;
-  }
+  #check-answer-btn { background: #2563eb; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; font-size: 1.05em; }
   #check-answer-btn:hover { background: #1d4ed8; }
-  
-  #error-message {
-    color: #b91c1c; font-weight: bold; text-align: center; margin: 10px 0 0 0; font-size: 0.9em;
-  }
-
+  #error-message { color: #b91c1c; font-weight: bold; text-align: center; margin: 10px 0 0 0; font-size: 0.9em; }
   .hidden { display: none !important; }
-  .compass-viewport { width: 100%; aspect-ratio: 2/3; touch-action: none; position: relative; margin: 10px 0; }
-  svg { width: 100%; height: 100%; user-select: none; }
-  
-  /* Redesigned Overlay (Covers the top panel only) */
-  #success-overlay {
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: #dcfce7;
-    z-index: 10;
+
+  /* Allow the compass SVG to flex and fill empty vertical space */
+  .compass-viewport { 
+    width: 100%; 
+    aspect-ratio: 2/3; 
+    touch-action: none; 
+    position: relative; 
+    margin: 10px 0; 
+    flex-grow: 1; 
+    min-height: 0; /* Critical for flex shrinking */
     display: flex;
-    flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 20px;
-    box-sizing: border-box;
-    text-align: center;
-    animation: fadeIn 0.2s ease-out;
+  }
+  svg { width: 100%; height: 100%; user-select: none; max-height: 100%; }
+  
+  #success-overlay {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #dcfce7; z-index: 10; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; text-align: center; animation: fadeIn 0.2s ease-out;
   }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-  
   #success-overlay h3 { margin: 0 0 10px 0; font-size: 1.8em; color: #166534; }
   #success-overlay p { margin: 0 0 20px 0; font-weight: bold; color: #1e3a8a; font-size: 1.05em;}
-  #overlay-next-btn {
-    background: #166534; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1.1em; width: 100%; max-width: 250px;
-  }
+  #overlay-next-btn { background: #166534; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1.1em; width: 100%; max-width: 250px; }
   #overlay-next-btn:hover { background: #11502a; }
 
-  /* Precision controls below */
-  .precision-controls { display: flex; justify-content: space-between; margin-top: 15px; gap: 10px; }
+  .precision-controls { display: flex; justify-content: space-between; gap: 10px; flex-shrink: 0; }
   .control-group { flex: 1; display: flex; flex-direction: column; align-items: center; background: #fff; padding: 10px; border-radius: 8px; border: 1px solid #e5e7eb; }
   .control-group span { font-size: 0.8em; color: #6b7280; margin-bottom: 8px; text-transform: uppercase; font-weight: 600;}
   .control-group div { display: flex; gap: 5px; }
   .ctrl-btn { background: #f3f4f6; border: 1px solid #d1d5db; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; color: #374151;}
   .ctrl-btn:hover { background: #e5e7eb; }
+  
+  .interaction-hint { text-align: center; font-size: 0.9em; color: #4b5563; margin: 15px 0 0 0; background: #f3f4f6; padding: 10px; border-radius: 8px; border: 1px dashed #d1d5db; flex-shrink: 0; }
+
+  /* MOBILE-SPECIFIC VIEWPORT FILL */
+  @media (max-width: 600px) {
+    .compass-widget-container {
+      max-width: 100%;
+      width: 100%;
+      height: 100vh; /* Fallback */
+      height: 100dvh; /* Modern viewport height */
+      margin: 0;
+      padding: 15px 10px;
+      border-radius: 0;
+      border: none;
+      box-shadow: none;
+    }
+    
+    .compass-viewport {
+      aspect-ratio: auto; /* Drops the fixed ratio so it can squeeze into the remaining screen height */
+      margin: 5px 0;
+    }
+
+    .widget-title { font-size: 1.3em; margin-bottom: 5px; }
+    #challenge-panel { min-height: auto; }
+    #challenge-content { padding: 10px 10px 15px 10px; }
+    .interaction-hint { font-size: 0.8em; padding: 8px; margin-top: 10px; }
+  }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  // --- DOM Elements ---
   const bezelGroup = document.getElementById('bezel-group');
   const baseplateGroup = document.getElementById('baseplate-group');
   const needleGroup = document.getElementById('needle-group');
@@ -195,12 +193,12 @@ document.addEventListener('DOMContentLoaded', () => {
   
   const checkAnswerBtn = document.getElementById('check-answer-btn');
   const errorMessage = document.getElementById('error-message');
-
   const successOverlay = document.getElementById('success-overlay');
   const overlayExplanationText = document.getElementById('overlay-explanation-text');
   const overlayNextBtn = document.getElementById('overlay-next-btn');
 
-  // --- State ---
+  modeToggle.checked = false;
+
   let isDragging = false;
   let dragTarget = null;
   let dragStartAngle = 0;
@@ -213,7 +211,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentLevelIndex = 0;
   let isLevelSolved = false;
 
-  // --- Draw Bezel Ticks ---
   for (let i = 0; i < 360; i += 2) {
     const isMajor = i % 10 === 0; const isNumber = i % 20 === 0;
     const rad = (i - 90) * (Math.PI / 180); const innerRadius = isMajor ? 90 : 96; const outerRadius = 104;
@@ -233,12 +230,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // --- Core Rendering Function ---
-  // Notice that checkLevel() has been removed from this function so it doesn't auto-evaluate
   function updateCompass() {
     bezelAngle = (bezelAngle % 360 + 360) % 360;
     baseplateAngle = (baseplateAngle % 360 + 360) % 360;
-    
     const needleAngle = -baseplateAngle;
 
     bezelGroup.setAttribute('transform', `rotate(${bezelAngle}, 200, 350)`);
@@ -246,7 +240,6 @@ document.addEventListener('DOMContentLoaded', () => {
     needleGroup.setAttribute('transform', `rotate(${needleAngle}, 200, 350)`);
   }
 
-  // --- Challenge Progression Engine ---
   const challenges = [
     {
       title: "Level 1: The Basics (Degree Reading)",
@@ -322,7 +315,6 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCompass();
   }
 
-  // Bind the check logic to the new button
   checkAnswerBtn.addEventListener('click', () => {
     if (isLevelSolved) return;
     const current = challenges[currentLevelIndex];
@@ -336,18 +328,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (solved) {
       isLevelSolved = true;
       errorMessage.classList.add('hidden');
-      
       overlayExplanationText.textContent = current.successExplanation;
       successOverlay.classList.remove('hidden');
-      
       if (currentLevelIndex < challenges.length - 1) { overlayNextBtn.textContent = "Next Level"; }
       else { overlayNextBtn.textContent = "Lessons Complete! (Reset)"; }
     } else {
-      // Show error message temporarily
       errorMessage.classList.remove('hidden');
       checkAnswerBtn.textContent = "Try Again";
-      
-      // Reset button text after 2 seconds
       setTimeout(() => {
         if (!isLevelSolved) {
             checkAnswerBtn.textContent = "Check Answer";
@@ -357,7 +344,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // --- Interaction Logic (Drag/Touch) ---
   const getAngle = (clientX, clientY) => {
     const rect = document.getElementById('compass-svg').getBoundingClientRect();
     const normalizedX = (clientX - rect.left) * (400 / rect.width);
@@ -412,7 +398,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelector('.compass-viewport').addEventListener('mousedown', startDrag);
   document.querySelector('.compass-viewport').addEventListener('touchstart', startDrag, { passive: false });
 
-  // Precision controls
   document.getElementById('btn-bezel-ccw').addEventListener('click', () => { bezelAngle -= 5; updateCompass(); });
   document.getElementById('btn-bezel-cw').addEventListener('click', () => { bezelAngle += 5; updateCompass(); });
   document.getElementById('btn-body-cw').addEventListener('click', () => { baseplateAngle += 5; updateCompass(); });
