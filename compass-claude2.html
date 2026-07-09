@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!-- Zoom is allowed for low-vision users; the compass itself uses touch-action:none so drags stay smooth. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Learn to Use a Compass</title>
+  <style>
+    :root{
+      --ink:#0f2540; --ink-soft:#42556e; --line:#d7dce3; --paper:#ffffff;
+      --page:#eef1f4; --blue:#1e40af; --blue-dark:#1a368f; --north:#d32f2f;
+      --good:#166534; --good-bg:#dcfce7; --bad:#b91c1c;
+      --panel:#eef2ff; --panel-line:#c7d2fe;
+      --map-paper:#f4eedd; --map-grid:#c9b892; --map-contour:#c2ab74; --water:#a9c9e8;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0; padding:0; background:var(--page);
+      display:flex; justify-content:center; align-items:flex-start; min-height:100vh;
+      color:var(--ink);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    }
+    .widget{
+      max-width:520px; width:100%; line-height:1.45; background:var(--paper);
+      border:1px solid var(--line); border-radius:14px; padding:20px;
+      box-shadow:0 10px 20px -8px rgba(15,37,64,.18);
+      display:flex; flex-direction:column; margin:16px;
+    }
+    .title{ text-align:center; margin:0 0 4px; color:var(--ink); font-size:1.5em; letter-spacing:-.01em; }
+    .subtitle{ text-align:center; margin:0 0 14px; color:var(--ink-soft); font-size:.9em; }
+
+    .topbar{ display:flex; gap:8px; align-items:center; justify-content:space-between; margin-bottom:12px; flex-wrap:wrap; }
+    .switch{ display:inline-flex; align-items:center; gap:8px; font-weight:600; cursor:pointer; }
+    .switch input{ width:18px; height:18px; }
+    .btn{ font:inherit; cursor:pointer; border-radius:8px; border:1px solid var(--line);
+      background:#f4f6fa; color:var(--ink); padding:8px 12px; font-weight:600; }
+    .btn:hover{ background:#e9edf4; }
+    .btn:focus-visible, .switch input:focus-visible, svg:focus-visible{ outline:3px solid #93b4ff; outline-offset:2px; }
+    .btn.on{ background:var(--blue); color:#fff; border-color:var(--blue); }
+
+    /* Instrument readout — the one signature element */
+    .readout{
+      display:flex; align-items:center; justify-content:center; gap:14px;
+      background:var(--ink); color:#e8f0ff; border-radius:10px; padding:10px 14px; margin-bottom:12px;
+    }
+    .readout .lbl{ font-size:.7em; letter-spacing:.14em; text-transform:uppercase; color:#8fa6c7; text-align:right; line-height:1.2; }
+    .readout .val{ font-family:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+      font-size:2em; font-weight:700; font-variant-numeric:tabular-nums; min-width:3.4ch; text-align:right; }
+    .readout .card{ font-family:ui-monospace,monospace; font-size:1.05em; color:#bfe3c4; min-width:2.2ch; }
+
+    #challenge-panel{ background:var(--panel); border:1px solid var(--panel-line); border-radius:10px;
+      position:relative; overflow:hidden; margin-bottom:12px; }
+    #challenge-content{ padding:14px 15px 16px; }
+    #progress-header{ position:absolute; top:10px; right:12px; font-size:.8em; color:var(--ink-soft); font-weight:700; z-index:5; }
+    #guide-title{ margin:0 6px 6px 0; color:var(--blue); font-size:1.02em; max-width:78%; }
+    #guide-explanation{ margin:0 0 12px; font-size:.93em; color:var(--ink-soft); }
+    #challenge-text{ margin:10px 0 0; font-size:1.02em; color:var(--ink); font-weight:700;
+      border-top:1px solid var(--panel-line); padding-top:10px; }
+    .primary{ background:var(--blue); color:#fff; border:none; padding:12px 18px; border-radius:8px;
+      cursor:pointer; font-weight:700; width:100%; margin-top:12px; font-size:1.03em; }
+    .primary:hover{ background:var(--blue-dark); }
+    #feedback{ margin:10px 0 0; font-weight:600; font-size:.92em; min-height:1.2em; }
+    #feedback.bad{ color:var(--bad); }
+    #feedback.good{ color:var(--good); }
+    .hidden{ display:none !important; }
+
+    .stage{ width:100%; margin:6px 0; }
+    .viewport{ width:100%; touch-action:none; position:relative; display:flex; justify-content:center; }
+    #compass-svg{ width:100%; max-height:56vh; aspect-ratio:2/3; user-select:none; }
+    #map-svg{ width:100%; max-height:56vh; aspect-ratio:1/1; user-select:none; }
+
+    .controls{ display:flex; gap:10px; }
+    .ctrl{ flex:1; display:flex; flex-direction:column; align-items:center; gap:8px;
+      background:#f7f9fc; padding:10px; border-radius:10px; border:1px solid var(--line); }
+    .ctrl .cap{ font-size:.72em; color:var(--ink-soft); text-transform:uppercase; font-weight:700; letter-spacing:.04em; }
+    .ctrl .row{ display:flex; gap:5px; }
+    .step{ background:#fff; border:1px solid var(--line); padding:8px 11px; border-radius:7px;
+      cursor:pointer; font-weight:700; color:var(--ink); min-width:42px; font:inherit; }
+    .step:hover{ background:#eef2f8; }
+
+    .hint{ text-align:center; font-size:.86em; color:var(--ink-soft); margin:12px 0 0;
+      background:#f4f6fa; padding:9px; border-radius:8px; border:1px dashed var(--line); }
+
+    /* Collapsible "why this works" explanation */
+    #guide-details{ margin:2px 0 0; }
+    #guide-details > summary{ cursor:pointer; color:var(--blue); font-weight:600; font-size:.86em;
+      list-style:none; padding:3px 0; display:inline-block; }
+    #guide-details > summary::-webkit-details-marker{ display:none; }
+    #guide-details > summary::after{ content:" \25BE"; }
+    #guide-details[open] > summary::after{ content:" \25B4"; }
+    #guide-explanation{ margin:6px 0 2px; }
+
+    /* Action bar holds the check/next button + feedback */
+    #action-bar{ margin-top:12px; }
+    #action-btn{ margin-top:0; transition:background .15s ease; }
+    #action-btn.next{ background:var(--good); }
+    #action-btn.next:hover{ filter:brightness(.93); }
+
+    /* Touch ergonomics */
+    .btn,.step,.primary,.switch,#guide-details summary{ touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+    #compass-svg,#map-svg{ -webkit-touch-callout:none; }
+
+    @media (prefers-reduced-motion:no-preference){
+      #action-btn.next{ animation:pop .2s ease-out; }
+      @keyframes pop{ from{transform:scale(.97)} to{transform:scale(1)} }
+    }
+
+    /* ---------- phones (portrait) ---------- */
+    @media (max-width:600px){
+      body{ align-items:flex-start; overscroll-behavior-y:contain; }
+      .widget{ margin:0; border-radius:0; border:none; box-shadow:none; min-height:100dvh; padding:12px 12px 0; }
+      .title{ font-size:1.25em; margin-bottom:2px; }
+      .subtitle{ display:none; }
+      .readout{ padding:8px 12px; margin-bottom:10px; }
+      .readout .val{ font-size:1.7em; }
+      #challenge-content{ padding:12px 13px 12px; }
+      #guide-title{ font-size:.98em; }
+      #compass-svg{ max-height:44vh; }
+      #map-svg{ max-height:46vh; }
+      .step{ padding:12px 10px; min-height:46px; flex:1; }
+      .ctrl .row{ width:100%; }
+      /* Keep the button reachable no matter how far the page scrolls */
+      #action-bar{ position:sticky; bottom:0; margin-top:10px; z-index:20;
+        background:var(--paper); padding:9px 0 max(9px,env(safe-area-inset-bottom));
+        box-shadow:0 -7px 14px -9px rgba(15,37,64,.28); }
+      .primary{ padding:14px; font-size:1.05em; }
+      .hint{ margin-top:10px; }
+    }
+
+    /* ---------- phones (landscape) ---------- */
+    @media (max-height:520px) and (orientation:landscape){
+      .subtitle{ display:none; }
+      .widget{ padding:10px 14px 0; }
+      #compass-svg{ max-height:78vh; }
+      #map-svg{ max-height:80vh; }
+      #action-bar{ position:sticky; bottom:0; z-index:20; background:var(--paper);
+        padding:8px 0 env(safe-area-inset-bottom); box-shadow:0 -6px 12px -8px rgba(15,37,64,.25); }
+    }
+  </style>
+</head>
+<body>
+  <div class="widget">
+    <h1 class="title">Learn to Use a Compass</h1>
+    <p class="subtitle">Set a bearing, orient yourself, then take a bearing off a real map.</p>
+
+    <div class="topbar">
+      <label class="switch"><input type="checkbox" id="practice-toggle"> Practice mode</label>
+      <button class="btn" id="labels-toggle" aria-pressed="false">Show labels</button>
+    </div>
+
+    <!-- Live instrument readout (announced to screen readers) -->
+    <div class="readout" aria-live="polite">
+      <div class="lbl">Index<br>bearing</div>
+      <div class="val" id="readout-deg">0&deg;</div>
+      <div class="lbl">Facing</div>
+      <div class="card" id="readout-card">N</div>
+    </div>
+
+    <div id="challenge-panel" class="hidden">
+      <div id="progress-header">&nbsp;</div>
+      <div id="challenge-content">
+        <h2 id="guide-title">Scout's guide</h2>
+        <p id="challenge-text"></p>
+        <details id="guide-details" open>
+          <summary>Why this works</summary>
+          <p id="guide-explanation"></p>
+        </details>
+      </div>
+    </div>
+
+    <!-- ===================== COMPASS STAGE ===================== -->
+    <div class="stage" id="compass-stage">
+      <div class="viewport">
+        <svg id="compass-svg" viewBox="0 0 400 600" tabindex="0" role="img"
+             aria-label="Baseplate compass. Use left and right arrow keys to turn the dial.">
+          <defs>
+            <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+              <feDropShadow dx="2" dy="4" stdDeviation="4" flood-opacity="0.25"/>
+            </filter>
+          </defs>
+
+          <g id="baseplate-group">
+            <rect id="grab-body" x="100" y="50" width="200" height="400" rx="15"
+                  fill="rgba(240,248,255,0.6)" stroke="#c3ccd8" stroke-width="2" filter="url(#shadow)"/>
+            <path d="M200,60 L200,180" stroke="var(--north)" stroke-width="4" stroke-dasharray="6,6"/>
+            <polygon points="200,50 190,70 210,70" fill="var(--north)"/>
+            <text x="200" y="196" font-size="12" font-weight="bold" text-anchor="middle" fill="#333">DIRECTION OF TRAVEL</text>
+            <line x1="200" y1="210" x2="200" y2="232" stroke="#000" stroke-width="3"/>
+
+            <g id="bezel-group">
+              <circle id="grab-bezel" cx="200" cy="350" r="110" fill="#fff" stroke="#333" stroke-width="12" cursor="grab"/>
+              <circle cx="200" cy="350" r="104" fill="none" stroke="#e2e2e2" stroke-width="1"/>
+              <!-- Orienting arrow ("the shed") -->
+              <polygon points="200,262 172,338 228,338" fill="rgba(211,47,47,0.18)" stroke="var(--north)" stroke-width="3"/>
+              <!-- Orienting lines (align these with map north) -->
+              <line x1="172" y1="290" x2="172" y2="430" stroke="var(--north)" stroke-width="2" stroke-dasharray="5,5"/>
+              <line x1="200" y1="270" x2="200" y2="430" stroke="var(--north)" stroke-width="1.5" stroke-dasharray="5,5"/>
+              <line x1="228" y1="290" x2="228" y2="430" stroke="var(--north)" stroke-width="2" stroke-dasharray="5,5"/>
+              <g id="bezel-ticks"></g>
+              <text x="200" y="260" font-size="16" font-weight="bold" text-anchor="middle" fill="var(--north)">N</text>
+              <text x="290" y="356" font-size="16" font-weight="bold" text-anchor="middle" fill="#333">E</text>
+              <text x="200" y="452" font-size="16" font-weight="bold" text-anchor="middle" fill="#333">S</text>
+              <text x="110" y="356" font-size="16" font-weight="bold" text-anchor="middle" fill="#333">W</text>
+            </g>
+
+            <g id="needle-group">
+              <polygon points="200,266 186,350 200,350" fill="var(--north)"/>
+              <polygon points="200,266 214,350 200,350" fill="#b71c1c"/>
+              <polygon points="200,434 186,350 200,350" fill="#fff" stroke="#ccc" stroke-width="1"/>
+              <polygon points="200,434 214,350 200,350" fill="#f0f0f0" stroke="#ccc" stroke-width="1"/>
+              <circle cx="200" cy="350" r="6" fill="#333"/>
+            </g>
+          </g>
+
+          <!-- Labels overlay (Meet Your Compass) -->
+          <g id="labels-layer" class="hidden" font-size="12" font-weight="600">
+            <g stroke="#1e40af" stroke-width="1.4">
+              <line x1="70" y1="60" x2="198" y2="58"/>
+              <line x1="70" y1="150" x2="100" y2="150"/>
+              <line x1="66" y1="300" x2="196" y2="300"/>
+              <line x1="70" y1="420" x2="172" y2="410"/>
+              <line x1="334" y1="232" x2="206" y2="222"/>
+              <line x1="330" y1="150" x2="308" y2="330"/>
+              <line x1="330" y1="360" x2="278" y2="352"/>
+              <line x1="330" y1="470" x2="214" y2="322"/>
+            </g>
+            <g fill="#1e40af">
+              <text x="66" y="56" text-anchor="end">Direction-of-travel arrow</text>
+              <text x="66" y="154" text-anchor="end">Baseplate</text>
+              <text x="62" y="304" text-anchor="end">Magnetic needle</text>
+              <text x="62" y="316" text-anchor="end" font-size="10" fill="#b91c1c">(red end = north)</text>
+              <text x="66" y="424" text-anchor="end">Orienting lines</text>
+              <text x="338" y="236" text-anchor="start">Index line</text>
+              <text x="338" y="154" text-anchor="start">Housing (dial)</text>
+              <text x="338" y="364" text-anchor="start">Degree ring</text>
+              <text x="338" y="474" text-anchor="start">Orienting arrow</text>
+              <text x="338" y="486" text-anchor="start" font-size="10" fill="#b91c1c">("the shed")</text>
+            </g>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ===================== MAP STAGE ===================== -->
+    <div class="stage hidden" id="map-stage">
+      <div class="viewport">
+        <svg id="map-svg" viewBox="0 0 400 400" role="img"
+             aria-label="Topographic map. Tap two points, then turn the dial to take a bearing.">
+          <rect x="0" y="0" width="400" height="400" fill="var(--map-paper)"/>
+          <g id="map-grid" stroke="var(--map-grid)" stroke-width="1"></g>
+          <g id="map-contours" fill="none" stroke="var(--map-contour)" stroke-width="1.2" opacity="0.8"></g>
+          <text x="200" y="16" text-anchor="middle" font-size="11" font-weight="700" fill="#8a7333">MAP NORTH &uarr;</text>
+          <g id="map-features"></g>
+          <line id="map-route" x1="0" y1="0" x2="0" y2="0" stroke="#1e40af" stroke-width="2" stroke-dasharray="5,4" class="hidden"/>
+          <g id="map-compass" class="hidden"></g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Precision controls -->
+    <div class="controls" id="controls">
+      <div class="ctrl">
+        <span class="cap">Turn the dial</span>
+        <div class="row">
+          <button class="step" data-dial="-5" aria-label="Turn dial 5 degrees counter-clockwise">-5</button>
+          <button class="step" data-dial="-1" aria-label="Turn dial 1 degree counter-clockwise">-1</button>
+          <button class="step" data-dial="1" aria-label="Turn dial 1 degree clockwise">+1</button>
+          <button class="step" data-dial="5" aria-label="Turn dial 5 degrees clockwise">+5</button>
+        </div>
+      </div>
+      <div class="ctrl" id="body-ctrl">
+        <span class="cap">Turn your body</span>
+        <div class="row">
+          <button class="step" data-body="-5" aria-label="Turn body left">&#8634; Left</button>
+          <button class="step" data-body="5" aria-label="Turn body right">Right &#8635;</button>
+        </div>
+      </div>
+    </div>
+
+    <p class="hint" id="hint">Tip: drag the dial or the baseplate with your finger or mouse. On the compass, arrow keys turn the dial.</p>
+
+    <div id="action-bar" class="hidden">
+      <p id="feedback"></p>
+      <button class="primary" id="action-btn">Check answer</button>
+    </div>
+  </div>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // ---------- element handles ----------
+    const $ = id => document.getElementById(id);
+    const bezelGroup=$('bezel-group'), baseplateGroup=$('baseplate-group'), needleGroup=$('needle-group');
+    const practiceToggle=$('practice-toggle'), labelsToggle=$('labels-toggle'), labelsLayer=$('labels-layer');
+    const panel=$('challenge-panel'), progress=$('progress-header'), guideTitle=$('guide-title');
+    const guideExp=$('guide-explanation'), challengeText=$('challenge-text');
+    const actionBtn=$('action-btn'), feedback=$('feedback');
+    const actionBar=$('action-bar'), guideDetails=$('guide-details');
+    const readoutDeg=$('readout-deg'), readoutCard=$('readout-card');
+    const compassStage=$('compass-stage'), mapStage=$('map-stage');
+    const bodyCtrl=$('body-ctrl'), hint=$('hint');
+    const compassSvg=$('compass-svg'), mapSvg=$('map-svg');
+
+    // ---------- state ----------
+    let bezelAngle=0, baseplateAngle=0;      // main compass
+    let mapHousing=0;                        // housing rotation on the map (relative to baseplate)
+    let levelIndex=0, solved=false, mode='free';
+    let labelsOn=false;
+
+    // drag state
+    let dragging=false, dragTarget=null, dragStart=0, dragInitBezel=0, dragInitBody=0, dragInitHousing=0;
+
+    // ---------- helpers ----------
+    const norm = a => ((a%360)+360)%360;
+    const indexBearing = () => norm(360 - bezelAngle);           // number under the index line
+    const cardinal = b => { const n=['N','NE','E','SE','S','SW','W','NW']; return n[Math.round(norm(b)/45)%8]; };
+    const circDiff = (a,b) => { let d=Math.abs(norm(a)-norm(b))%360; return d>180?360-d:d; };
+
+    // ---------- build degree ring ----------
+    (function buildTicks(){
+      const c=$('bezel-ticks');
+      for(let i=0;i<360;i+=2){
+        const major=i%10===0, numbered=i%20===0;
+        const rad=(i-90)*Math.PI/180, ri=major?90:96, ro=104;
+        const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+        line.setAttribute('x1',200+ri*Math.cos(rad)); line.setAttribute('y1',350+ri*Math.sin(rad));
+        line.setAttribute('x2',200+ro*Math.cos(rad)); line.setAttribute('y2',350+ro*Math.sin(rad));
+        line.setAttribute('stroke','#333'); line.setAttribute('stroke-width',major?2:1);
+        c.appendChild(line);
+        if(numbered && ![0,90,180,270].includes(i)){
+          const tr=78, tx=200+tr*Math.cos(rad), ty=350+tr*Math.sin(rad);
+          const t=document.createElementNS('http://www.w3.org/2000/svg','text');
+          t.setAttribute('x',tx); t.setAttribute('y',ty+4); t.setAttribute('font-size','10');
+          t.setAttribute('text-anchor','middle'); t.setAttribute('fill','#333');
+          t.setAttribute('transform',`rotate(${i},${tx},${ty})`); t.textContent=i;
+          c.appendChild(t);
+        }
+      }
+    })();
+
+    // ---------- render ----------
+    function updateCompass(){
+      bezelAngle=norm(bezelAngle); baseplateAngle=norm(baseplateAngle);
+      bezelGroup.setAttribute('transform',`rotate(${bezelAngle},200,350)`);
+      baseplateGroup.setAttribute('transform',`rotate(${baseplateAngle},200,350)`);
+      needleGroup.setAttribute('transform',`rotate(${-baseplateAngle},200,350)`);
+      updateReadout();
+    }
+    function updateReadout(){
+      if(mode==='map' && !$('map-compass').classList.contains('hidden')){
+        const r=norm(360-mapHousing);
+        readoutDeg.innerHTML=Math.round(r)+'&deg;';
+        readoutCard.textContent=cardinal(r);
+      } else {
+        readoutDeg.innerHTML=Math.round(indexBearing())+'&deg;';
+        readoutCard.textContent=cardinal(indexBearing());
+      }
+    }
+
+    // ---------- MAP: features + geometry ----------
+    // north = up (screen). Bearing measured clockwise from up.
+    const FEATURES = {
+      junction:{x:110,y:300,label:'Trail junction',icon:'junction'},
+      tower:{x:300,y:130,label:'Fire tower',icon:'tower'},
+      camp:{x:90,y:120,label:'Campsite',icon:'camp'},
+      lake:{x:285,y:300,label:'Lake',icon:'lake'}
+    };
+    const bearingOf=(a,b)=>norm(Math.atan2(b.x-a.x, -(b.y-a.y))*180/Math.PI);
+
+    (function buildMap(){
+      const g=$('map-grid');
+      for(let x=0;x<=400;x+=50){ const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+        l.setAttribute('x1',x);l.setAttribute('y1',0);l.setAttribute('x2',x);l.setAttribute('y2',400);
+        l.setAttribute('stroke-width', x%100===0?1.4:0.7); g.appendChild(l); }
+      for(let y=0;y<=400;y+=50){ const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+        l.setAttribute('x1',0);l.setAttribute('y1',y);l.setAttribute('x2',400);l.setAttribute('y2',y);
+        l.setAttribute('stroke-width', y%100===0?1.4:0.7); l.setAttribute('opacity','0.6'); g.appendChild(l); }
+      // decorative contour rings around the fire-tower hill
+      const cg=$('map-contours');
+      [24,42,60,80].forEach((r,i)=>{ const e=document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+        e.setAttribute('cx',300);e.setAttribute('cy',130);e.setAttribute('rx',r);e.setAttribute('ry',r*0.8);
+        e.setAttribute('opacity',0.85-i*0.12); cg.appendChild(e); });
+
+      const fg=$('map-features');
+      Object.entries(FEATURES).forEach(([id,f])=>{
+        const wrap=document.createElementNS('http://www.w3.org/2000/svg','g');
+        wrap.setAttribute('data-feature',id); wrap.style.cursor='pointer';
+        let icon='';
+        if(f.icon==='tower') icon=`<polygon points="${f.x},${f.y-11} ${f.x-9},${f.y+7} ${f.x+9},${f.y+7}" fill="#8a5a2b"/>`;
+        else if(f.icon==='lake') icon=`<ellipse cx="${f.x}" cy="${f.y}" rx="26" ry="15" fill="var(--water)" stroke="#5b87b5"/>`;
+        else if(f.icon==='camp') icon=`<polygon points="${f.x},${f.y-10} ${f.x-10},${f.y+7} ${f.x+10},${f.y+7}" fill="#2f7d4f" stroke="#1c5c37"/>`;
+        else icon=`<circle cx="${f.x}" cy="${f.y}" r="6" fill="#7a5">`+
+                  `</circle><path d="M${f.x-9},${f.y-9} L${f.x+9},${f.y+9} M${f.x-9},${f.y+9} L${f.x+9},${f.y-9}" stroke="#8a6a3a" stroke-width="2"/>`;
+        wrap.innerHTML = icon +
+          `<circle data-hit="${id}" cx="${f.x}" cy="${f.y}" r="26" fill="transparent"/>`+
+          `<circle data-ring="${id}" cx="${f.x}" cy="${f.y}" r="18" fill="none" stroke="#1e40af" stroke-width="3" class="hidden"/>`+
+          `<text x="${f.x}" y="${f.y+30}" text-anchor="middle" font-size="11" font-weight="700" fill="#5a4a2a">${f.label}</text>`;
+        fg.appendChild(wrap);
+      });
+    })();
+
+    function buildMapCompass(){
+      // static compass glyph in local coords, centred at origin, travel arrow pointing up (-y)
+      const g=$('map-compass');
+      g.innerHTML=`
+        <rect x="-32" y="-150" width="64" height="300" rx="10" fill="rgba(255,255,255,0.55)" stroke="#8892a3" stroke-width="1.5"/>
+        <polygon points="0,-150 -8,-134 8,-134" fill="var(--north)"/>
+        <line x1="0" y1="-134" x2="0" y2="-58" stroke="var(--north)" stroke-width="2.5" stroke-dasharray="5,5"/>
+        <line x1="-22" y1="-58" x2="22" y2="-58" stroke="#000" stroke-width="2"/>
+        <g id="map-housing-group">
+          <circle id="map-grab" cx="0" cy="0" r="58" fill="#fff" stroke="#333" stroke-width="7" cursor="grab"/>
+          <polygon points="0,-46 -16,-4 16,-4" fill="rgba(211,47,47,0.18)" stroke="var(--north)" stroke-width="2.5"/>
+          <line x1="-16" y1="-20" x2="-16" y2="40" stroke="var(--north)" stroke-width="1.5" stroke-dasharray="4,4"/>
+          <line x1="0" y1="-30" x2="0" y2="40" stroke="var(--north)" stroke-width="1.5" stroke-dasharray="4,4"/>
+          <line x1="16" y1="-20" x2="16" y2="40" stroke="var(--north)" stroke-width="1.5" stroke-dasharray="4,4"/>
+          <text x="0" y="-40" text-anchor="middle" font-size="11" font-weight="bold" fill="var(--north)">N</text>
+        </g>`;
+    }
+
+    // two-point selection for map levels
+    let picks=[];
+    function resetMapPicks(){
+      picks=[];
+      $('map-route').classList.add('hidden');
+      $('map-compass').classList.add('hidden');
+      document.querySelectorAll('[data-ring]').forEach(r=>r.classList.add('hidden'));
+    }
+    function placeMapCompass(a,b){
+      const A=FEATURES[a], B=FEATURES[b];
+      const route=$('map-route');
+      route.setAttribute('x1',A.x); route.setAttribute('y1',A.y);
+      route.setAttribute('x2',B.x); route.setAttribute('y2',B.y);
+      route.classList.remove('hidden');
+      const mx=(A.x+B.x)/2, my=(A.y+B.y)/2;
+      const brg=bearingOf(A,B);
+      const gc=$('map-compass');
+      gc.setAttribute('transform',`translate(${mx},${my}) rotate(${brg})`);
+      gc.classList.remove('hidden');
+      updateMapHousing();
+    }
+    function updateMapHousing(){
+      const h=$('map-housing-group');
+      if(h) h.setAttribute('transform',`rotate(${norm(mapHousing)})`);
+      updateReadout();
+    }
+
+    // ---------- challenges ----------
+    const challenges = [
+      { part:'intro', title:'Meet your compass',
+        guide:'Before we navigate, get to know the parts. Tap "Show labels" above to see them on the compass. The dial (housing) turns to set a bearing; the index line is where you read it; the orienting arrow is nicknamed "the shed"; and the red end of the magnetic needle always points to north.',
+        prompt:'When you\u2019ve looked over the parts, start Part 1.',
+        intro:true },
+
+      { part:'compass', section:'Part 1: The compass', title:'Set a bearing',
+        guide:'A bearing is just a direction written as a number from 0\u2013359\u00b0. You set one by turning the dial until your number sits at the index line \u2014 the mark at the front of the baseplate.',
+        prompt:'Turn the dial until the index line reads 240\u00b0. Watch the readout above.',
+        target:{type:'bezel',val:120},
+        success:'That\u2019s a 240\u00b0 bearing set. On a real trip the direction-of-travel arrow would now point at your destination.' },
+
+      { part:'compass', section:'Part 1: The compass', title:'Cardinal directions',
+        guide:'Often you know a direction by name: north, east, south, west. Each hides a number: N=0\u00b0, E=90\u00b0, S=180\u00b0, W=270\u00b0.',
+        prompt:'Set your bearing to due west. (Check the readout \u2014 what number is west?)',
+        target:{type:'bezel',val:90},
+        success:'Due west set. The readout shows 270\u00b0 \u2014 west always equals 270\u00b0.' },
+
+      { part:'compass', section:'Part 1: The compass', title:'Red in the shed',
+        guide:'Here the dial is already set for you. In the field you now turn your whole body until the red needle sits inside the orienting arrow \u2014 "red in the shed." That points the direction-of-travel arrow the right way.',
+        setup:()=>{ bezelAngle=315; baseplateAngle=180; },
+        prompt:'Turn your body (left/right) until the red needle drops into the shed.',
+        target:{type:'body',val:45},
+        success:'Red\u2019s in the shed \u2014 you\u2019re oriented. Now you\u2019d just walk along the direction-of-travel arrow.' },
+
+      { part:'compass', section:'Part 1: The compass', title:'The full sequence',
+        guide:'Put it together. Your waypoint is northeast (45\u00b0). Set the dial first, then turn your body to box the needle.',
+        setup:()=>{ bezelAngle=0; baseplateAngle=180; },
+        prompt:'Set the dial to 45\u00b0, then turn until red is in the shed.',
+        check:()=> circDiff(bezelAngle,315)<=3 && circDiff(baseplateAngle,45)<=3,
+        success:'Perfect. Bearing 45\u00b0 set, needle boxed \u2014 follow that arrow.' },
+
+      { part:'compass', section:'Part 1: The compass', title:'The return trip',
+        guide:'To come home you reverse your bearing \u2014 the "back bearing," 180\u00b0 different. Under 180? add 180. Over 180? subtract 180.',
+        prompt:'You hiked out at 90\u00b0 (east). Set the dial to the bearing that gets you back to camp.',
+        check:()=> circDiff(bezelAngle,90)<=3,   // index reads 270
+        success:'Out at 90\u00b0 (east) means back at 270\u00b0 (west). Reverse bearing sorted.' },
+
+      { part:'map', section:'Part 2: The map', title:'Take a bearing off the map',
+        guide:'Now the real skill. To find the bearing between two places, lay the compass edge along them, then turn the DIAL so the orienting lines line up with the map\u2019s north-south grid and the orienting arrow points to map north (up). The number at the index line is your bearing \u2014 the needle isn\u2019t used for this part.',
+        prompt:'Step 1: tap the trail junction, then the fire tower. Step 2: turn the dial until the orienting arrow points to map north.',
+        map:{from:'junction',to:'tower'},
+        success:'' },
+
+      { part:'map', section:'Part 2: The map', title:'One more bearing',
+        guide:'Same three steps: connect the two points, align the orienting arrow with map north, read the index line. Careful not to leave the arrow pointing south \u2014 that gives the back bearing.',
+        prompt:'Step 1: tap the campsite, then the lake. Step 2: turn the dial so the orienting arrow points to map north.',
+        map:{from:'camp',to:'lake'},
+        success:'' }
+    ];
+
+    const compassLevels = challenges.filter(c=>c.part==='compass').length;
+    const mapLevels = challenges.filter(c=>c.part==='map').length;
+
+    // ---------- mode + level flow ----------
+    practiceToggle.addEventListener('change', e=>{
+      dragging=false; dragTarget=null; feedback.textContent='';
+      if(e.target.checked){ panel.classList.remove('hidden'); actionBar.classList.remove('hidden'); loadLevel(0); }
+      else {
+        panel.classList.add('hidden'); actionBar.classList.add('hidden');
+        mode='free'; setStage('compass'); bezelAngle=0; baseplateAngle=0; updateCompass();
+      }
+    });
+
+    function setStage(which){
+      if(which==='map'){ compassStage.classList.add('hidden'); mapStage.classList.remove('hidden');
+        bodyCtrl.style.visibility='hidden';
+        hint.textContent='Tip: tap the two places, then drag the dial to turn it. The readout shows your bearing.'; }
+      else { mapStage.classList.add('hidden'); compassStage.classList.remove('hidden');
+        bodyCtrl.style.visibility='visible';
+        hint.textContent='Tip: drag the dial or the baseplate. On the compass, arrow keys turn the dial.'; }
+    }
+
+    function loadLevel(i){
+      if(i>=challenges.length){ practiceToggle.checked=false; practiceToggle.dispatchEvent(new Event('change')); return; }
+      levelIndex=i; solved=false; feedback.textContent=''; feedback.className='';
+      const c=challenges[i];
+      bezelAngle=0; baseplateAngle=0; mapHousing=0;
+      mode = c.part==='map' ? 'map' : (c.part==='intro' ? 'intro' : 'compass');
+      setStage(c.part==='map' ? 'map' : 'compass');
+
+      // progress label
+      if(c.part==='intro') progress.textContent='Start here';
+      else if(c.part==='compass') progress.textContent=`Part 1 \u00b7 ${i} of ${compassLevels}`;
+      else progress.textContent=`Part 2 \u00b7 ${i-compassLevels} of ${mapLevels}`;
+
+      guideTitle.textContent = c.section ? `${c.section} \u2014 ${c.title}` : c.title;
+      guideExp.textContent=c.guide; challengeText.textContent=c.prompt;
+      actionBtn.textContent = c.intro ? 'Start Part 1' : 'Check answer';
+      actionBtn.classList.remove('next');
+      guideDetails.open = window.matchMedia('(min-width:601px)').matches;
+
+      if(c.setup) c.setup();
+
+      if(c.part==='map'){ buildMapCompass(); resetMapPicks(); }
+      else if(c.intro){ setLabels(true); }
+      updateCompass();
+    }
+
+    actionBtn.addEventListener('click', ()=>{
+      const c=challenges[levelIndex];
+      if(c.intro){ setLabels(false); loadLevel(levelIndex+1); return; }
+      if(solved){ loadLevel(levelIndex+1); return; }   // button now acts as "Next"
+      const res=evaluate(c);
+      if(res.solved){
+        solved=true;
+        feedback.textContent = res.success || c.success; feedback.className='good';
+        actionBtn.textContent = levelIndex>=challenges.length-1 ? 'Finish (reset)' : 'Next';
+        actionBtn.classList.add('next');
+      } else {
+        feedback.textContent=res.msg; feedback.className='bad';
+      }
+    });
+
+    // returns {solved, msg, success?}
+    function evaluate(c){
+      if(c.part==='map'){
+        if(picks.length<2) return {solved:false,msg:'First tap the two places on the map to lay your compass along them.'};
+        const A=FEATURES[picks[0]], B=FEATURES[picks[1]];
+        const trueB=bearingOf(A,B);
+        const arrowBearing=norm(trueB + mapHousing);   // where the orienting arrow points, in map frame
+        const reading=Math.round(norm(360-mapHousing));
+        if(circDiff(arrowBearing,0)<=4){
+          return {solved:true, success:`Spot on \u2014 the bearing from the ${A.label.toLowerCase()} to the ${B.label.toLowerCase()} is ${Math.round(trueB)}\u00b0. Orienting arrow to north, read the index line. That\u2019s taking a bearing.`};
+        }
+        if(circDiff(arrowBearing,180)<=6){
+          return {solved:false, msg:`Close, but your orienting arrow is pointing to map SOUTH \u2014 that\u2019s the back bearing (${reading}\u00b0). Flip the dial 180\u00b0 so the arrow points north.`};
+        }
+        return {solved:false, msg:'Not yet \u2014 turn the dial until the orienting lines run parallel with the up-and-down grid, arrow pointing up. Readout: '+reading+'\u00b0.'};
+      }
+      // compass levels
+      let ok=false;
+      if(c.check) ok=c.check();
+      else if(c.target.type==='bezel') ok=circDiff(bezelAngle,c.target.val)<=3;
+      else if(c.target.type==='body') ok=circDiff(baseplateAngle,c.target.val)<=3;
+      if(ok) return {solved:true};
+
+      // tailored hints
+      if(c.target && c.target.type==='bezel'){
+        const want=norm(360-c.target.val), have=indexBearing();
+        return {solved:false, msg:`You\u2019re at ${Math.round(have)}\u00b0, aiming for ${Math.round(want)}\u00b0. Nudge the dial ${turnWord(have,want)}.`};
+      }
+      if(c.target && c.target.type==='body'){
+        return {solved:false, msg:'Not boxed yet \u2014 keep turning your body until the red needle sits inside the shed.'};
+      }
+      if(levelIndex===4) return {solved:false, msg:'Check both: dial reads 45\u00b0, and the red needle is inside the shed.'};
+      if(levelIndex===5) return {solved:false, msg:'Reverse of 90\u00b0 is 90+180. Set the dial so the index line reads that number.'};
+      return {solved:false, msg:'Not quite \u2014 try again.'};
+    }
+    function turnWord(have,want){ // shortest direction to move the index reading
+      let d=norm(want-have); return d<=180 ? 'a touch counter-clockwise' : 'a touch clockwise';
+    }
+
+    // ---------- labels ----------
+    function setLabels(on){
+      labelsOn=on; labelsLayer.classList.toggle('hidden',!on);
+      labelsToggle.classList.toggle('on',on); labelsToggle.setAttribute('aria-pressed',String(on));
+      labelsToggle.textContent = on ? 'Hide labels' : 'Show labels';
+      if(on){ bezelAngle=0; baseplateAngle=0; updateCompass(); }
+    }
+    labelsToggle.addEventListener('click', ()=>{
+      if(mode==='map') return; // labels are for the compass view
+      setLabels(!labelsOn);
+    });
+
+    // ---------- pointer helpers ----------
+    function svgAngle(svg, cx, cy, vbw, vbh, clientX, clientY){
+      const r=svg.getBoundingClientRect();
+      const x=(clientX-r.left)*(vbw/r.width), y=(clientY-r.top)*(vbh/r.height);
+      return { ang:Math.atan2(y-cy, x-cx)*180/Math.PI, x, y };
+    }
+
+    // ---- main compass drag ----
+    function startCompassDrag(e){
+      if(solved || labelsOn || mode==='map') return;
+      const cx=(e.touches?e.touches[0].clientX:e.clientX), cy=(e.touches?e.touches[0].clientY:e.clientY);
+      const p=svgAngle(compassSvg,200,350,400,600,cx,cy);
+      const dist=Math.hypot(p.x-200,p.y-350);
+      dragTarget = dist<=110 ? 'bezel' : 'body';
+      dragInitBezel=bezelAngle; dragInitBody=baseplateAngle; dragStart=p.ang; dragging=true;
+      addMove(); if(e.type==='touchstart') e.preventDefault();
+    }
+    function moveCompass(e){
+      if(!dragging) return;
+      const cx=(e.type==='touchmove')?e.touches[0].clientX:e.clientX;
+      const cy=(e.type==='touchmove')?e.touches[0].clientY:e.clientY;
+      const p=svgAngle(compassSvg,200,350,400,600,cx,cy);
+      const change=p.ang-dragStart;
+      if(dragTarget==='bezel') bezelAngle=dragInitBezel+change; else baseplateAngle=dragInitBody+change;
+      updateCompass(); if(e.type==='touchmove') e.preventDefault();
+    }
+
+    // ---- map housing drag ----
+    function startMapDrag(e){
+      if(solved || $('map-compass').classList.contains('hidden')) return;
+      const cx=(e.touches?e.touches[0].clientX:e.clientX), cy=(e.touches?e.touches[0].clientY:e.clientY);
+      const gc=$('map-compass'); const m=gc.getCTM(); // includes translate+rotate
+      // centre of housing in viewBox coords:
+      const centre=gc.transform.baseVal.consolidate();
+      const p=svgAngle(mapSvg,0,0,400,400,cx,cy); // absolute; we need angle around housing centre
+      // recover translate from transform string
+      const tr=gc.getAttribute('transform').match(/translate\(([-\d.]+),([-\d.]+)\)/);
+      const mxc=tr?parseFloat(tr[1]):200, myc=tr?parseFloat(tr[2]):200;
+      dragStart=Math.atan2(p.y-myc, p.x-mxc)*180/Math.PI;
+      dragInitHousing=mapHousing; dragTarget='housing'; dragging=true;
+      addMove(); if(e.type==='touchstart') e.preventDefault();
+    }
+    function moveMap(e){
+      if(!dragging || dragTarget!=='housing') return;
+      const cx=(e.type==='touchmove')?e.touches[0].clientX:e.clientX;
+      const cy=(e.type==='touchmove')?e.touches[0].clientY:e.clientY;
+      const gc=$('map-compass');
+      const tr=gc.getAttribute('transform').match(/translate\(([-\d.]+),([-\d.]+)\)/);
+      const mxc=tr?parseFloat(tr[1]):200, myc=tr?parseFloat(tr[2]):200;
+      const p=svgAngle(mapSvg,0,0,400,400,cx,cy);
+      const ang=Math.atan2(p.y-myc, p.x-mxc)*180/Math.PI;
+      mapHousing=dragInitHousing+(ang-dragStart);
+      updateMapHousing(); if(e.type==='touchmove') e.preventDefault();
+    }
+
+    function onMove(e){ if(dragTarget==='housing') moveMap(e); else moveCompass(e); }
+    function endDrag(){
+      if(!dragging){ return; }
+      dragging=false;
+      // snap to whole degrees
+      bezelAngle=Math.round(bezelAngle); baseplateAngle=Math.round(baseplateAngle); mapHousing=Math.round(mapHousing);
+      dragTarget=null; updateCompass(); updateMapHousing();
+      document.removeEventListener('mousemove',onMove); document.removeEventListener('mouseup',endDrag);
+      document.removeEventListener('touchmove',onMove); document.removeEventListener('touchend',endDrag);
+    }
+    function addMove(){
+      document.addEventListener('mousemove',onMove); document.addEventListener('mouseup',endDrag);
+      document.addEventListener('touchmove',onMove,{passive:false}); document.addEventListener('touchend',endDrag);
+    }
+
+    compassSvg.addEventListener('mousedown',startCompassDrag);
+    compassSvg.addEventListener('touchstart',startCompassDrag,{passive:false});
+    mapSvg.addEventListener('mousedown',e=>{ if(!e.target.closest('[data-feature]')) startMapDrag(e); });
+    mapSvg.addEventListener('touchstart',e=>{ if(!e.target.closest('[data-feature]')) startMapDrag(e); },{passive:false});
+
+    // keyboard: arrows turn the dial
+    compassSvg.addEventListener('keydown',e=>{
+      if(mode==='map'||labelsOn||solved) return;
+      if(e.key==='ArrowLeft'){ bezelAngle-=1; updateCompass(); e.preventDefault(); }
+      if(e.key==='ArrowRight'){ bezelAngle+=1; updateCompass(); e.preventDefault(); }
+    });
+
+    // ---------- map feature taps ----------
+    mapSvg.addEventListener('click', e=>{
+      const wrap=e.target.closest('[data-feature]'); if(!wrap) return;
+      if(solved) return;
+      const c=challenges[levelIndex]; if(!c || c.part!=='map') return;
+      const id=wrap.getAttribute('data-feature');
+      const expected = picks.length===0 ? c.map.from : c.map.to;
+      if(id!==expected){
+        const nice=FEATURES[expected].label.toLowerCase();
+        feedback.textContent = picks.length===0
+          ? `Start at your own spot: tap the ${nice} first.`
+          : `Now tap your destination: the ${nice}.`;
+        feedback.className='bad';
+        return;
+      }
+      feedback.textContent=''; feedback.className='';
+      picks.push(id);
+      document.querySelector(`[data-ring="${id}"]`).classList.remove('hidden');
+      if(picks.length===2){ mapHousing=0; placeMapCompass(picks[0],picks[1]); }
+    });
+
+    // ---------- precision buttons ----------
+    document.querySelectorAll('[data-dial]').forEach(b=> b.addEventListener('click',()=>{
+      if(solved) return;
+      const d=parseInt(b.dataset.dial,10);
+      if(mode==='map'){ if($('map-compass').classList.contains('hidden')) return; mapHousing+=d; updateMapHousing(); }
+      else { if(labelsOn) return; bezelAngle+=d; updateCompass(); }
+    }));
+    document.querySelectorAll('[data-body]').forEach(b=> b.addEventListener('click',()=>{
+      if(solved||mode==='map'||labelsOn) return;
+      baseplateAngle+=parseInt(b.dataset.body,10); updateCompass();
+    }));
+
+    // ---------- init ----------
+    practiceToggle.checked=false;
+    setStage('compass');
+    updateCompass();
+  });
+  </script>
+</body>
+</html>
